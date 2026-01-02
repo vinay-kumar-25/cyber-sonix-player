@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00f2ff">
+    <link rel="icon" href="icons/icon-512.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cyber Sonix</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --panel: #0f0f12;
+            --accent: #00f2ff; 
+            --magenta: #ff00ff;
+            --text-main: #e0e0e0;
+            --text-sub: #666;
+            --border: #1a1a1f;
+            --neon-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: var(--text-main);
+            height: 100vh; width: 100vw;
+            overflow: hidden; /* Fixes mobile bounce */
+            position: fixed;
+        }
+
+        /* Cyber Background Grid */
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 30px 30px; z-index: -1; opacity: 0.2;
+        }
+
+        header {
+            padding: max(15px, env(safe-area-inset-top)) 20px 15px;
+            background: var(--panel);
+            border-bottom: 2px solid var(--accent);
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: var(--neon-shadow);
+        }
+
+        .logo { font-weight: 900; color: var(--accent); letter-spacing: 2px; text-shadow: 0 0 8px var(--accent);cursor: none;}
+
+        .btn-group { display: flex; gap: 8px; }
+        .cyber-btn {
+            background: transparent; border: 1px solid var(--accent);
+            color: var(--accent); padding: 6px 10px; border-radius: 4px;
+            font-size: 0.65rem; font-weight: bold; text-transform: uppercase;
+        }
+
+        /* --- SEARCH & FILTERS --- */
+        .search-area { background: var(--panel); padding: 10px 15px; border-bottom: 1px solid var(--border); }
+        .search-input {
+            width: 100%; background: #000; border: 1px dashed var(--accent);
+            padding: 10px; color: var(--accent); border-radius: 4px; outline: none;
+        }
+        .search-input:focus{
+            border:1px solid     var(--magenta);
+        }
+
+        .filter-row {
+            display: flex; gap: 10px; overflow-x: auto; padding: 10px 15px;
+            background: var(--bg); border-bottom: 1px solid var(--border);
+        }
+        .filter-chip {
+            padding: 6px 15px; background: var(--panel); border: 1px solid var(--border);
+            font-size: 0.7rem; white-space: nowrap; color: var(--text-sub);
+            cursor: pointer;
+        }
+
+        .filter-chip.active { border-color: var(--magenta); color: var(--magenta); box-shadow: 0 0 5px var(--magenta); }
+
+        /* --- THE FIXED SCROLL LIST --- */
+        .main-content {
+            height: calc(100vh - 270px); /* Adjust based on header/footer size */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 150px;
+        }
+
+        #songList { display: flex; flex-direction: column; width: 100%; }
+
+        .song-card {
+            display: flex; align-items: center; padding: 12px 20px;
+            border-bottom: 1px solid var(--border); gap: 15px;
+            background: rgba(15, 15, 18, 0.4);
+        }
+        .song-card.playing { background: rgba(0, 242, 255, 0.08); border-left: 4px solid var(--accent); }
+        .song-card:active { background: rgba(255, 0, 255, 0.1); }
+
+        .song-thumb {
+            width: 40px; height: 40px; background: #111; border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 0.8rem;
+        }
+
+        .song-info { flex: 1; min-width: 0; }
+        .song-title { font-weight: bold; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-meta { font-size: 0.7rem; color: var(--text-sub); margin-top: 2px; }
+
+        .fav-btn { font-size: 1.2rem; padding: 5px; cursor: pointer; }
+
+        /* --- PLAYER BAR --- */
+        .player-bar {
+            position: fixed; bottom: max(10px, env(safe-area-inset-bottom));
+            left: 10px; right: 10px; background: var(--panel);
+            border: 1px solid var(--accent); border-radius: 12px;
+            padding: 12px; box-shadow: var(--neon-shadow); z-index: 1000;
+        }
+
+        .progress-container { height: 4px; background: #222; margin-bottom: 10px; position: relative; cursor: pointer; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; box-shadow: 0 0 8px var(--accent); }
+
+        .p-info { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+        .p-title { font-size: 0.8rem; font-weight: bold; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .p-time { font-family: monospace; font-size: 0.7rem; color: var(--text-sub); margin-left: 10px; }
+
+        .controls { display: flex; justify-content: space-around; align-items: center; }
+        .ctrl-btn { font-size: 1.3rem; color: var(--text-main); cursor: pointer;text-shadow:2px 2px 10px var(--magenta);}
+        .play-pause { 
+            width: 48px; height: 48px; background: var(--accent); color: #000; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 12px var(--accent);
+            cursor: pointer;
+        }
+
+        input[type="file"] { display: none; }
+.song-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 14px 22px;
+    background: rgba(15, 15, 18, 0.6);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s ease;
+}
+
+/* ⚠️ PLAYING MODE */
+.song-card.playing {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0, 242, 255, 0.18),
+            rgba(255, 0, 255, 0.12),
+            rgba(0, 242, 255, 0.18)
+        );
+    border-left: 4px solid var(--accent);
+    animation: neonCore 1.6s infinite alternate;
+}
+
+/* 🔥 CORE NEON BREATH */
+@keyframes neonCore {
+    from {
+        box-shadow:
+            0 0 8px rgba(0,242,255,0.4),
+            0 0 20px rgba(0,242,255,0.25),
+            inset 0 0 14px rgba(255,0,255,0.12);
+    }
+    to {
+        box-shadow:
+            0 0 14px rgba(0,242,255,0.9),
+            0 0 40px rgba(255,0,255,0.5),
+            inset 0 0 22px rgba(0,242,255,0.35);
+    }
+}
+
+/* ⚡ ENERGY WAVE SCAN */
+.song-card.playing::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background:
+        repeating-linear-gradient(
+            120deg,
+            transparent 0%,
+            rgba(0,242,255,0.35) 2%,
+            transparent 4%
+        );
+    animation: energyWave 2.2s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes energyWave {
+    0% { transform: translateX(-50%) rotate(0deg); }
+    100% { transform: translateX(50%) rotate(360deg); }
+}
+
+
+/* 🚀 MOVEMENT FEEL */
+.song-card.playing:hover {
+    transform: translateX(6px) scale(1.03);
+}
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">Cyber Sonix</div>
+    <div class="btn-group">
+        <button class="cyber-btn" onclick="document.getElementById('folderIn').click()">+ Folder</button>
+        <button class="cyber-btn" onclick="document.getElementById('fileIn').click()">+ File</button>
+    </div>
+</header>
+
+<div class="search-area">
+    <input type="text" class="search-input" id="searchInput" placeholder="SEARCH_SONGS..." onkeyup="handleSearch()">
+</div>
+
+<div class="filter-row">
+    <div class="filter-chip active" id="f-all" onclick="setFilter('all')">ALL_TRACKS</div>
+    <div class="filter-chip" id="f-fav" onclick="setFilter('fav')">FAVORITES</div>
+    <div class="filter-chip" onclick="clearLibrary()">WIPE_STORAGE</div>
+</div>
+
+<main class="main-content">
+    <div id="songList">
+        <div style="text-align:center; padding: 50px; color: var(--text-sub); font-size: 0.8rem;">
+            SYSTEM_IDLE<br>PLEASE_UPLOAD_SONGS
+        </div>
+    </div>
+</main>
+
+<footer class="player-bar">
+    <div class="p-info">
+        <div class="p-title" id="p-title">NO_TRACK_SELECTED</div>
+        <div class="p-time" id="p-time">0:00</div>
+    </div>
+    <div class="progress-container" onclick="seek(event)">
+        <div class="progress-fill" id="p-fill"></div>
+    </div>
+    <div class="controls">
+        <div class="ctrl-btn" id="shuf-btn" onclick="toggleShuffle()" style="opacity:0.6; font-size: 1.5rem;">🔀</div>
+        <div class="ctrl-btn" onclick="prev()">⏮</div>
+        <div class="play-pause" onclick="togglePlay()" id="play-trigger">▶</div>
+        <div class="ctrl-btn" onclick="next()">⏭</div>
+        <div class="ctrl-btn" id="rep-btn" onclick="toggleRepeat()" style="opacity:0.6; font-size: 1.5rem;">🔁</div>
+        <div id="p-favbtn" class="ctrl-btn" onclick=handlefav()></div>
+    </div>
+</footer>
+
+<input type="file" id="folderIn" webkitdirectory directory multiple>
+<input type="file" id="fileIn" multiple accept="audio/*">
+<audio id="audio"></audio>
+
+<script>
+    let library = [];
+    let favorites = [];
+    let currentIndex = -1;
+    let filterMode = 'all';
+    let searchQuery = '';
+    let isShuffle = false;
+    let isRepeat = false;
+
+    const audio = document.getElementById('audio');
+    const dbName = "ZenCyberDB";
+
+    // --- INDEXEDDB INIT ---
+  const request = indexedDB.open(dbName, 1);
+
+request.onupgradeneeded = (e) => {
+    console.log("Creating / upgrading database");
+    const db = e.target.result;
+
+    // Main songs store
+    if (!db.objectStoreNames.contains("songs")) {
+        db.createObjectStore("songs", {
+            keyPath: "id",
+            autoIncrement: true
+        });
+    }
+
+    // Favorites store (songId as PRIMARY KEY)
+    if (!db.objectStoreNames.contains("fav_songs")) {
+        db.createObjectStore("fav_songs", {
+            keyPath: "songId"
+        });
+    }
+};
+
+request.onsuccess = () => {
+    loadFromDB();
+};
+
+
+  function loadFromDB() {
+    console.log("loading from db");
+
+    const db = request.result;
+
+    // ---- 1️⃣ LOAD SONGS ----
+    const songTx = db.transaction("songs", "readonly");
+    const songStore = songTx.objectStore("songs");
+    const songReq = songStore.getAll();
+
+    songReq.onsuccess = () => {
+        library = songReq.result;
+
+        // ---- 2️⃣ LOAD FAVORITES ----
+        const favTx = db.transaction("fav_songs", "readonly");
+        const favStore = favTx.objectStore("fav_songs");
+        const favReq = favStore.getAll();
+
+        favReq.onsuccess = () => {
+           
+            favorites = favReq.result.map(f => f.songId);
+            render();
+        };
+    };
+}
+function isFav(index) {
+    const songId = library[index].id;
+    return favorites.includes(songId);
+}
+
+    // --- ADDING SONGS (FILES & FOLDERS) ---
+    async function addSongsToDB(files) {
+    const db = request.result;
+    const tx = db.transaction("songs", "readwrite");
+    const store = tx.objectStore("songs");
+
+    const audioFiles = Array.from(files).filter(
+        f => f.type.startsWith("audio/")
+    );
+
+    for (const file of audioFiles) {
+        store.add({
+            name: file.name.replace(/\.[^/.]+$/, ""),
+            artist: "LOCAL_DEVICE",
+            size: file.size,
+            data: file // Blob
+        });
+    }
+
+    tx.oncomplete = () => loadFromDB();
+}
+
+    document.getElementById('folderIn').onchange = (e) => addSongsToDB(e.target.files);
+    document.getElementById('fileIn').onchange = (e) => addSongsToDB(e.target.files);
+
+    // --- RENDER FUNCTION (FIXED SCROLL) ---
+    function render() {
+        const list = document.getElementById('songList');
+        let displayList = library;
+
+        if (searchQuery) {
+            displayList = displayList.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        }
+        if (filterMode === 'fav') {
+            displayList = displayList.filter(s => favorites.includes(s.id));
+        }
+
+        if (displayList.length === 0) {
+            list.innerHTML = `<div style="text-align:center; padding:50px; color:var(--text-sub)">NO_FILES_FOUND</div>`;
+            return;
+        }
+        updatePlayerFavIcon();
+        list.innerHTML = displayList.map((song) => {
+            const actualIndex = library.findIndex(s => s.id === song.id);
+            const isPlaying = actualIndex === currentIndex;
+            const isFav = favorites.includes(song.id);
+
+            return `
+                <div class="song-card ${isPlaying ? 'playing' : ''}" onclick="playSong(${actualIndex})">
+                    <div class="song-thumb">ID_${song.id}</div>
+                    <div class="song-info">
+                        <div class="song-title">${song.name}</div>
+                        <div class="song-meta">${(song.size/1024/1024).toFixed(1)}MB // DB_STORAGE</div>
+                    </div>
+                    <div class="fav-btn" onclick="toggleFav(event, ${song.id})">${isFav ? '❤️' : '🤍'}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updatePlayerFavIcon() {
+    if (currentIndex === -1) return;
+
+    const songId = library[currentIndex].id;
+    document.getElementById('p-favbtn').innerText =
+        favorites.includes(songId) ? "❤️" : "🤍";
+}
+
+    
+    // --- CORE PLAYER LOGIC ---
+    function playSong(index) {
+        if (index < 0 || index >= library.length) return;
+        currentIndex = index;
+        const song = library[index];
+
+        if (audio.src) URL.revokeObjectURL(audio.src);
+        audio.src = URL.createObjectURL(song.data);
+        audio.play();
+
+        document.getElementById('p-title').innerText = song.name;
+        document.getElementById('p-favbtn').innerText = favorites.includes(song.id)?"❤️":"🤍";
+        document.getElementById('play-trigger').innerText = '⏸';
+        render();
+    }
+
+    function togglePlay() {
+        if (!audio.src) return;
+        audio.paused ? (audio.play(), document.getElementById('play-trigger').innerText = '⏸') : 
+                       (audio.pause(), document.getElementById('play-trigger').innerText = '▶');
+    }
+
+    function next() {
+        let n = isShuffle ? Math.floor(Math.random() * library.length) : (currentIndex + 1) % library.length;
+        playSong(n);
+    }
+
+    function prev() {
+        playSong((currentIndex - 1 + library.length) % library.length);
+    }
+
+    function toggleShuffle() {
+        isShuffle = !isShuffle;
+        document.getElementById('shuf-btn').style.opacity = isShuffle ? "1" : "0.6";
+        document.getElementById('shuf-btn').style.border = isShuffle ? "var(--magenta)" : "white";
+    }
+
+    function toggleRepeat() {
+        isRepeat = !isRepeat;
+        document.getElementById('rep-btn').style.opacity = isRepeat ? "1" : "0.6";
+        document.getElementById('rep-btn').style.border = isRepeat ? "var(--magenta)" : "white";
+    }
+
+    function toggleFavoriteInDB(songId) {
+    const db = request.result;
+    const tx = db.transaction("fav_songs", "readwrite");
+    const store = tx.objectStore("fav_songs");
+
+    // Check if already favorite
+    const getReq = store.get(songId);
+
+    getReq.onsuccess = () => {
+        if (getReq.result) {
+            // ❌ already favorite → remove
+            store.delete(songId);
+        } else {
+            // ❤️ not favorite → add
+            store.put({
+                songId: songId,
+                addedAt: Date.now()
+            });
+        }
+    };
+
+    tx.oncomplete = () => {
+        loadFromDB(); // refresh memory + UI
+    };
+}
+
+
+function toggleFav(e, id) {
+    e?.stopPropagation(); // safe optional call
+    toggleFavoriteInDB(id);
+}
+
+ function handlefav() {
+    if (currentIndex === -1) return;
+
+    const songId = library[currentIndex].id;
+    toggleFavoriteInDB(songId);
+}
+
+
+    function handleSearch() {
+        searchQuery = document.getElementById('searchInput').value;
+        render();
+    }
+
+    function setFilter(mode) {
+        filterMode = mode;
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        document.getElementById(`f-${mode}`).classList.add('active');
+        render();
+    }
+
+    function clearLibrary() {
+        if(confirm("WIPE ENTIRE DATABASE?")) {
+            const tx = request.result.transaction("songs", "readwrite");
+            tx.objectStore("songs").clear();
+            tx.oncomplete = () => { library = []; currentIndex = -1; render(); };
+        }
+    }
+
+    // --- AUDIO UI UPDATES ---
+    audio.ontimeupdate = () => {
+        const perc = (audio.currentTime / audio.duration) * 100 || 0;
+        document.getElementById('p-fill').style.width = perc + '%';
+        const m = Math.floor(audio.currentTime / 60);
+        const s = Math.floor(audio.currentTime % 60);
+        document.getElementById('p-time').innerText = `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    audio.onended = () => isRepeat ? audio.play() : next();
+
+    function seek(e) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    }
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(() => console.log('SW registered'))
+      .catch(err => console.error('SW failed', err));
+  });
+}
+</script>
+
+</body>
+</html>
