@@ -58,6 +58,10 @@
             color: var(--accent); padding: 6px 10px; border-radius: 4px;
             font-size: 0.65rem; font-weight: bold; text-transform: uppercase;
         }
+        .wipe-btn{
+            color: red;
+            border-color: red;
+        }
 
         /* --- SEARCH & FILTERS --- */
         .search-area { background: var(--panel); padding: 10px 15px; border-bottom: 1px solid var(--border); }
@@ -78,7 +82,7 @@
             font-size: 0.7rem; white-space: nowrap; color: var(--text-sub);
             cursor: pointer;
         }
-
+        
         .filter-chip.active { border-color: var(--magenta); color: var(--magenta); box-shadow: 0 0 5px var(--magenta); }
 
         /* --- THE FIXED SCROLL LIST --- */
@@ -212,6 +216,7 @@
     <div class="btn-group">
         <button class="cyber-btn" onclick="document.getElementById('folderIn').click()">+ Folder</button>
         <button class="cyber-btn" onclick="document.getElementById('fileIn').click()">+ File</button>
+        <div class="cyber-btn wipe-btn" onclick="clearLibrary()">WIPE_STORAGE</div>
     </div>
 </header>
 
@@ -222,7 +227,7 @@
 <div class="filter-row">
     <div class="filter-chip active" id="f-all" onclick="setFilter('all')">ALL_TRACKS</div>
     <div class="filter-chip" id="f-fav" onclick="setFilter('fav')">FAVORITES</div>
-    <div class="filter-chip" onclick="clearLibrary()">WIPE_STORAGE</div>
+    
 </div>
 
 <main class="main-content">
